@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 600px;
-  background: #000000; // Black background for chatbox
+  background: #000000; 
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
@@ -12,7 +12,7 @@
   flex: 1;
   padding: 20px;
   overflow-y: auto;
-  background: #000000; // Black to match container
+  background: #000000; 
   position: relative;
 
   &::-webkit-scrollbar {
@@ -20,7 +20,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #5c1414; // Dark red scrollbar
+    background: #5c1414; 
     border-radius: 4px;
   }
 }
@@ -67,7 +67,7 @@
 
     .message-text {
       font-size: 14px;
-      color: #ffffff; // White text for both user and bot
+      color: #ffffff; 
     }
 
     &.loading {
@@ -77,21 +77,21 @@
   }
 
   &.user .message-content {
-    background: #5c1414; // Dark red for user
+    background: #5c1414; 
     border-bottom-right-radius: 2px;
   }
 
   &.bot .message-content {
-    background: #1f1f1f; // Slightly lighter black for bot to differentiate
+    background: #1f1f1f; 
     border-bottom-left-radius: 2px;
-    border: 1px solid #333333; // Subtle border for visibility
+    border: 1px solid #333333; 
   }
 }
 
 .input-area {
   display: flex;
   padding: 15px;
-  background: #000000; // Black to match
+  background: #000000; 
   border-top: 1px solid #333333;
   gap: 10px;
 
@@ -118,7 +118,7 @@
 
   button {
     padding: 12px 20px;
-    background: #5c1414; // Dark red for all buttons
+    background: #5c1414; 
     color: #ffffff;
     border: none;
     border-radius: 5px;
@@ -127,7 +127,7 @@
     transition: background 0.3s ease, transform 0.2s ease;
 
     &:hover {
-      background: #3b0d0d; // Darker red on hover
+      background: #3b0d0d; 
       transform: translateY(-2px);
     }
 

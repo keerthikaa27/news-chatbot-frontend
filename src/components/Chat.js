@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import './Chat.scss';
 
+const BASE_URL = 'https://news-chatbot-backend-ko8e.onrender.com'; 
 
 const TypingText = ({ text }) => {
   const [displayedText, setDisplayedText] = useState('');
@@ -14,7 +15,7 @@ const TypingText = ({ text }) => {
       } else {
         clearInterval(interval);
       }
-    }, 20); 
+    }, 20);
     return () => clearInterval(interval);
   }, [text]);
   return <span className="message-text typing">{displayedText}</span>;
@@ -29,7 +30,7 @@ const Chat = ({ sessionId }) => {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/history/${sessionId}`);
+        const res = await axios.get(`${BASE_URL}/history/${sessionId}`);
         setMessages(res.data.history.map(item => [
           { role: 'user', content: item.user },
           { role: 'bot', content: item.bot }
@@ -53,7 +54,7 @@ const Chat = ({ sessionId }) => {
     setIsLoading(true);
 
     try {
-      const res = await axios.post('http://localhost:5000/chat', {
+      const res = await axios.post(`${BASE_URL}/chat`, {
         message: input,
         sessionId
       });
@@ -74,7 +75,7 @@ const Chat = ({ sessionId }) => {
 
   const resetSession = async () => {
     try {
-      await axios.delete(`http://localhost:5000/history/${sessionId}`);
+      await axios.delete(`${BASE_URL}/history/${sessionId}`);
       setMessages([]);
       setInput('');
     } catch (err) {
