@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import './Chat.scss';
 
-const BASE_URL = 'https://news-chatbot-backend-new.onrender.com/'; 
+const BASE_URL = 'https://news-chatbot-backend-new.onrender.com'; 
 
 const TypingText = ({ text }) => {
   const [displayedText, setDisplayedText] = useState('');
