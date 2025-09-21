@@ -13,7 +13,7 @@ const ChatApp = () => {
   const fetchSessions = async () => {
     try {
       const res = await axios.get(`${backendUrl}/sessions`);
-      setSessions(res.data.sessions);
+      setSessions(res.data.sessions || []);
     } catch (err) {
       console.error("Error fetching sessions:", err);
     }
@@ -24,10 +24,15 @@ const ChatApp = () => {
   }, []);
 
   useEffect(() => {
-    // Refresh sessions periodically
     const interval = setInterval(fetchSessions, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  const createNewSession = () => {
+    const newSessionId = `session-${Date.now()}`;
+    setSessions((prev) => [...prev, { id: newSessionId, preview: "New Chat" }]);
+    setActiveSession(newSessionId);
+  };
 
   return (
     <div className="chatapp-container">
@@ -37,6 +42,7 @@ const ChatApp = () => {
         activeSession={activeSession}
         setActiveSession={setActiveSession}
         backendUrl={backendUrl}
+        createNewSession={createNewSession}
       />
       <div className="chat-area">
         <Chat sessionId={activeSession} />

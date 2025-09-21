@@ -2,17 +2,14 @@ import React from "react";
 import axios from "axios";
 import "./Sidebar.scss";
 
-
-
 const Sidebar = ({
   sessions,
   setSessions,
   activeSession,
   setActiveSession,
-  backendUrl
+  backendUrl,
+  createNewSession,
 }) => {
-    
-
   const handleBackHome = () => {
     window.location.href = "/";
   };
@@ -32,13 +29,13 @@ const Sidebar = ({
   return (
     <div className="sidebar">
       <button className="back-home-button" onClick={handleBackHome}>
-        ←  Back to Home
+        ← Back to Home
       </button>
-
-    <h3 className="chats-heading">Chats</h3>
-
+      <button className="new-chat-button" onClick={createNewSession}>
+        New Chat
+      </button>
+      <h3 className="chats-heading">Chats</h3>
       <ul className="session-list">
-
         {sessions.map((s) => (
           <li
             key={s.id}
@@ -49,7 +46,6 @@ const Sidebar = ({
           </li>
         ))}
       </ul>
-
       {sessions.length > 0 && (
         <button className="clear-history-button" onClick={handleClearHistory}>
           Delete History

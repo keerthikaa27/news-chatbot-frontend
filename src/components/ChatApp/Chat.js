@@ -4,21 +4,34 @@ import "./Chat.scss";
 
 const BASE_URL = "https://news-chatbot-backend-new.onrender.com";
 
-const TypingText = ({ text }) => {
-  const [displayedText, setDisplayedText] = useState("");
+const TypingText = ({ text, isNew }) => {
+  const [displayedText, setDisplayedText] = useState(isNew ? "" : text);
+  const rafRef = useRef(null);
 
   useEffect(() => {
+    if (!isNew) {
+      setDisplayedText(text);
+      return;
+    }
+
     let i = 0;
-    const interval = setInterval(() => {
+    const animate = () => {
       if (i < text.length) {
         setDisplayedText(text.slice(0, i + 1));
         i++;
+        rafRef.current = requestAnimationFrame(animate);
       } else {
-        clearInterval(interval);
+        setDisplayedText(text);
       }
-    }, 20);
-    return () => clearInterval(interval);
-  }, [text]);
+    };
+
+    rafRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, [text, isNew]);
 
   return <span className="message-text typing">{displayedText}</span>;
 };
@@ -27,20 +40,25 @@ const Chat = ({ sessionId }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [newMessageId, setNewMessageId] = useState(null);
   const messagesEndRef = useRef(null);
+  const currentSessionRef = useRef(sessionId);
 
   useEffect(() => {
+    currentSessionRef.current = sessionId;
     const fetchHistory = async () => {
       try {
         const res = await axios.get(`${BASE_URL}/history/${sessionId}`);
-        setMessages(
-          res.data.history
-            .map((item) => [
-              { role: "user", content: item.user },
-              { role: "bot", content: item.bot },
-            ])
-            .flat()
-        );
+        if (sessionId === currentSessionRef.current) {
+          setMessages(
+            res.data.history
+              .map((item, index) => [
+                { role: "user", content: item.user, timestamp: new Date().toLocaleTimeString(), id: `user-${index}`, read: false },
+                { role: "bot", content: item.bot, isNew: false, timestamp: new Date().toLocaleTimeString(), id: `bot-${index}`, reactions: {} },
+              ])
+              .flat()
+          );
+        }
       } catch (err) {
         console.error("History fetch error:", err);
       }
@@ -49,12 +67,33 @@ const Chat = ({ sessionId }) => {
   }, [sessionId]);
 
   useEffect(() => {
+    const timers = messages
+      .filter((msg) => msg.role === "user" && !msg.read)
+      .map((msg) =>
+        setTimeout(() => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === msg.id ? { ...m, read: true } : m
+            )
+          );
+        }, 2000)
+      );
+    return () => timers.forEach(clearTimeout);
+  }, [messages]);
+
+  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const sendMessage = async () => {
     if (!input.trim()) return;
-    const userMessage = { role: "user", content: input };
+    const userMessage = {
+      role: "user",
+      content: input,
+      timestamp: new Date().toLocaleTimeString(),
+      id: `user-${Date.now()}`,
+      read: false,
+    };
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
@@ -63,8 +102,19 @@ const Chat = ({ sessionId }) => {
         message: input,
         sessionId,
       });
-      const botMessage = { role: "bot", content: res.data.reply };
-      setMessages((prev) => [...prev, botMessage]);
+      const botMessage = {
+        role: "bot",
+        content: res.data.reply,
+        isNew: true,
+        timestamp: new Date().toLocaleTimeString(),
+        id: `bot-${Date.now()}`,
+        reactions: {},
+      };
+      if (sessionId === currentSessionRef.current) {
+        setMessages((prev) => [...prev, botMessage]);
+        setNewMessageId(botMessage.content);
+        setTimeout(() => setNewMessageId(null), 5000);
+      }
     } catch (err) {
       console.error("Fetch error:", err.response?.data || err.message);
       const errorMessage = {
@@ -73,8 +123,16 @@ const Chat = ({ sessionId }) => {
           err.response?.data?.error ||
           err.response?.data?.details ||
           "Error fetching response",
+        isNew: true,
+        timestamp: new Date().toLocaleTimeString(),
+        id: `bot-${Date.now()}`,
+        reactions: {},
       };
-      setMessages((prev) => [...prev, errorMessage]);
+      if (sessionId === currentSessionRef.current) {
+        setMessages((prev) => [...prev, errorMessage]);
+        setNewMessageId(errorMessage.content);
+        setTimeout(() => setNewMessageId(null), 5000);
+      }
     }
 
     setIsLoading(false);
@@ -84,14 +142,25 @@ const Chat = ({ sessionId }) => {
   const resetSession = async () => {
     try {
       await axios.delete(`${BASE_URL}/history/${sessionId}`);
-      setMessages([]);
-      setInput("");
+      if (sessionId === currentSessionRef.current) {
+        setMessages([]);
+        setInput("");
+      }
     } catch (err) {
       console.error("Reset session error:", err);
-      setMessages((prev) => [
-        ...prev,
-        { role: "bot", content: "Error clearing session" },
-      ]);
+      if (sessionId === currentSessionRef.current) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "bot",
+            content: "Error clearing session",
+            isNew: true,
+            timestamp: new Date().toLocaleTimeString(),
+            id: `bot-${Date.now()}`,
+            reactions: {},
+          },
+        ]);
+      }
     }
   };
 
@@ -101,6 +170,22 @@ const Chat = ({ sessionId }) => {
     }
   };
 
+  const addReaction = (messageId, emoji) => {
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.id === messageId
+          ? {
+              ...msg,
+              reactions: {
+                ...msg.reactions,
+                [emoji]: (msg.reactions[emoji] || 0) + 1,
+              },
+            }
+          : msg
+      )
+    );
+  };
+
   return (
     <div className="chat-container">
       <div className="messages">
@@ -108,16 +193,42 @@ const Chat = ({ sessionId }) => {
           <div className="welcome-message">Dive into the latest news!</div>
         )}
 
-        {messages.map((msg, i) => (
-          <div key={i} className={`message ${msg.role}`}>
+        {messages.map((msg) => (
+          <div key={msg.id} className={`message ${msg.role}`}>
             <div className="message-content">
               <span className="message-role">
                 {msg.role === "user" ? "You" : "Bot"}
               </span>
               {msg.role === "bot" ? (
-                <TypingText text={msg.content} />
+                <TypingText text={msg.content} isNew={msg.isNew && msg.content === newMessageId} />
               ) : (
                 <span className="message-text">{msg.content}</span>
+              )}
+              <div className="message-meta">
+                <span className="timestamp">{msg.timestamp}</span>
+                {msg.role === "user" && (
+                  <span className={`read-receipt ${msg.read ? "read" : "unread"}`}>
+                    {msg.read ? "✓✓" : "✓"}
+                  </span>
+                )}
+              </div>
+              {msg.role === "bot" && (
+                <div className="reactions">
+                  <button
+                    className="reaction-button"
+                    onClick={() => addReaction(msg.id, "👍")}
+                    aria-label="Like reaction"
+                  >
+                    👍 {msg.reactions["👍"] || 0}
+                  </button>
+                  <button
+                    className="reaction-button"
+                    onClick={() => addReaction(msg.id, "👎")}
+                    aria-label="Dislike reaction"
+                  >
+                    👎 {msg.reactions["👎"] || 0}
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -147,7 +258,7 @@ const Chat = ({ sessionId }) => {
           {isLoading ? "Sending..." : "Send"}
         </button>
         <button onClick={resetSession} disabled={isLoading}>
-          Reset Chat
+          Reset
         </button>
       </div>
     </div>
