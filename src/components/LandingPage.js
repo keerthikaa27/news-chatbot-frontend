@@ -7,18 +7,15 @@ const categories = ["General", "Technology", "Sports", "Business", "Health", "En
 const LandingPage = () => {
   const [headlines, setHeadlines] = useState([]);
   const [category, setCategory] = useState("General");
-  const [hoveredIndex, setHoveredIndex] = useState(null); // for tooltip preview
+  const [hoveredIndex, setHoveredIndex] = useState(null); 
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchNews = async () => {
       try {
-        const response = await fetch(
-          `https://newsapi.org/v2/top-headlines?country=us&category=${category.toLowerCase()}&apiKey=01282aaa259948d7b679ba64e42c0587`
-        );
+        const response = await fetch("https://news-chatbot-backend-new.onrender.com/news?category=general");
         const data = await response.json();
         if (data.articles) {
-          // Store both title & description for tooltip
           setHeadlines(
             data.articles.map((article) => ({
               title: article.title,
