@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
+import { useLocation } from "react-router-dom";  // ✅ added
 import "./Chat.scss";
 
 const BASE_URL = "https://news-chatbot-backend-new.onrender.com";
@@ -44,6 +45,10 @@ const Chat = ({ sessionId }) => {
   const messagesEndRef = useRef(null);
   const currentSessionRef = useRef(sessionId);
 
+  const location = useLocation(); // ✅ added
+  const queryParams = new URLSearchParams(location.search);
+  const initialQuery = queryParams.get("query"); // ✅ headline from ticker
+
   useEffect(() => {
     currentSessionRef.current = sessionId;
     const fetchHistory = async () => {
@@ -53,8 +58,21 @@ const Chat = ({ sessionId }) => {
           setMessages(
             res.data.history
               .map((item, index) => [
-                { role: "user", content: item.user, timestamp: new Date().toLocaleTimeString(), id: `user-${index}`, read: false },
-                { role: "bot", content: item.bot, isNew: false, timestamp: new Date().toLocaleTimeString(), id: `bot-${index}`, reactions: {} },
+                {
+                  role: "user",
+                  content: item.user,
+                  timestamp: new Date().toLocaleTimeString(),
+                  id: `user-${index}`,
+                  read: false,
+                },
+                {
+                  role: "bot",
+                  content: item.bot,
+                  isNew: false,
+                  timestamp: new Date().toLocaleTimeString(),
+                  id: `bot-${index}`,
+                  reactions: {},
+                },
               ])
               .flat()
           );
@@ -72,9 +90,7 @@ const Chat = ({ sessionId }) => {
       .map((msg) =>
         setTimeout(() => {
           setMessages((prev) =>
-            prev.map((m) =>
-              m.id === msg.id ? { ...m, read: true } : m
-            )
+            prev.map((m) => (m.id === msg.id ? { ...m, read: true } : m))
           );
         }, 2000)
       );
@@ -85,11 +101,23 @@ const Chat = ({ sessionId }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const sendMessage = async () => {
-    if (!input.trim()) return;
+  const hasSentInitialQuery = useRef(false);
+
+useEffect(() => {
+  if (initialQuery && !hasSentInitialQuery.current) {
+    hasSentInitialQuery.current = true; 
+    setInput(initialQuery);
+    sendMessage(initialQuery); 
+  }
+}, [initialQuery]);
+
+
+  const sendMessage = async (customMessage) => {
+    const messageToSend = customMessage || input;
+    if (!messageToSend.trim()) return;
     const userMessage = {
       role: "user",
-      content: input,
+      content: messageToSend,
       timestamp: new Date().toLocaleTimeString(),
       id: `user-${Date.now()}`,
       read: false,
@@ -99,7 +127,7 @@ const Chat = ({ sessionId }) => {
 
     try {
       const res = await axios.post(`${BASE_URL}/chat`, {
-        message: input,
+        message: messageToSend,
         sessionId,
       });
       const botMessage = {
@@ -200,14 +228,19 @@ const Chat = ({ sessionId }) => {
                 {msg.role === "user" ? "You" : "Bot"}
               </span>
               {msg.role === "bot" ? (
-                <TypingText text={msg.content} isNew={msg.isNew && msg.content === newMessageId} />
+                <TypingText
+                  text={msg.content}
+                  isNew={msg.isNew && msg.content === newMessageId}
+                />
               ) : (
                 <span className="message-text">{msg.content}</span>
               )}
               <div className="message-meta">
                 <span className="timestamp">{msg.timestamp}</span>
                 {msg.role === "user" && (
-                  <span className={`read-receipt ${msg.read ? "read" : "unread"}`}>
+                  <span
+                    className={`read-receipt ${msg.read ? "read" : "unread"}`}
+                  >
                     {msg.read ? "✓✓" : "✓"}
                   </span>
                 )}
@@ -254,7 +287,7 @@ const Chat = ({ sessionId }) => {
           placeholder="Ask about the latest news..."
           disabled={isLoading}
         />
-        <button onClick={sendMessage} disabled={isLoading}>
+        <button onClick={() => sendMessage()} disabled={isLoading}>
           {isLoading ? "Sending..." : "Send"}
         </button>
         <button onClick={resetSession} disabled={isLoading}>
