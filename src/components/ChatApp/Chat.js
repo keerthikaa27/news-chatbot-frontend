@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import axios from "axios";
-import { useLocation } from "react-router-dom";  // ✅ added
+import { useLocation } from "react-router-dom";
 import "./Chat.scss";
 
 const BASE_URL = "https://news-chatbot-backend-new.onrender.com";
@@ -101,18 +101,7 @@ const Chat = ({ sessionId }) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const hasSentInitialQuery = useRef(false);
-
-useEffect(() => {
-  if (initialQuery && !hasSentInitialQuery.current) {
-    hasSentInitialQuery.current = true; 
-    setInput(initialQuery);
-    sendMessage(initialQuery); 
-  }
-}, [initialQuery]);
-
-
-  const sendMessage = async (customMessage) => {
+  const sendMessage = useCallback(async (customMessage) => {
     const messageToSend = customMessage || input;
     if (!messageToSend.trim()) return;
     const userMessage = {
@@ -165,7 +154,17 @@ useEffect(() => {
 
     setIsLoading(false);
     setInput("");
-  };
+  }, [sessionId, input]); 
+
+  const hasSentInitialQuery = useRef(false);
+
+  useEffect(() => {
+    if (initialQuery && !hasSentInitialQuery.current) {
+      hasSentInitialQuery.current = true; 
+      setInput(initialQuery);
+      sendMessage(initialQuery); 
+    }
+  }, [initialQuery, sendMessage]);
 
   const resetSession = async () => {
     try {
